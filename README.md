@@ -6,7 +6,7 @@ basicamente o código do meu projeto de reconhecimento, o Leviatã.
 [![Python Version](https://shields.io)](https://python.org)
 [![Security Layer](https://shields.io)]()
 
-O **Leviatã / Morningstar** é um framework modular de reconhecimento tático e análise de segurança desenvolvido nativamente em Python. Projetado para operar com foco estrito em OpSec e evasão de heurísticas, a ferramenta combina auditoria de infraestrutura de rede em baixo nível com engenharia de fuzzing em aplicações web (Camadas 3, 4 e 7 do Modelo OSI).
+O **Leviatã ** é um framework modular de reconhecimento tático e análise de segurança desenvolvido nativamente em Python. Projetado para operar com foco estrito em OpSec e evasão de heurísticas, a ferramenta combina auditoria de infraestrutura de rede em baixo nível com engenharia de fuzzing em aplicações web (Camadas 3, 4 e 7 do Modelo OSI).
 
 ---
 
