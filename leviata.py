@@ -45,45 +45,49 @@ def calcular_checksum(msg):
 
 
 def testar_e_configurar_proxy_transporte():
-    """Solicita o proxy de transporte, valida a latência e configura o Fallback de OpSec."""
-    print("\n[!] Configuração de Proxy de Transporte (Ex: 45.79.12.110:3128)")
-    proxy_input = input("Digite o proxy (ou ENTER para rodar DIRETO): ").strip()
-    
-    if not proxy_input:
-        print("[+] Modo de conexão: DIRETA (Seu IP real fará o tráfego)")
-        return None
-
-    if not proxy_input.startswith(("http://", "https://", "socks4://", "socks5://")):
-        proxy_string = f"http://{proxy_input}"
-    else:
-        proxy_string = proxy_input
-
-    print(f"[*] Testando integridade do túnel com o proxy {proxy_string}...")
-    
-    try:
-        limpo = proxy_string.replace("http://", "").replace("https://", "").replace("socks5://", "").replace("socks4://", "")
-        p_ip, p_porta = limpo.split(":")
-        p_porta = int(p_porta)
-    except Exception:
-        print("[!] Erro de Sintaxe: Use o formato IP:PORTA")
-        return None
-
-    try:
-        s_teste = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s_teste.settimeout(4)
-        s_teste.connect((p_ip, p_porta))
-        s_teste.close()
-        print(f"[+] PROXY DE TRANSPORTE RECEPTIVO! IP mascarado via: {proxy_string}")
-        return {"string": proxy_string, "ip": p_ip, "porta": p_porta}
-    except (socket.timeout, ConnectionRefusedError):
-        print(f"\n[!] ALERTA DE TIMEOUT: O proxy {proxy_input} está inativo ou recusou a conexão!")
-        decisao = input("[?] Deseja continuar a execução de forma DIRETA (Riscando seu IP real)? (s/n): ").strip().lower()
-        if decisao == 's':
-            print("[+] Contingência aceita: Conexão direta via host ativada.")
-            return None
-        else:
+    """
+    Solicita o proxy de transporte em loop estrito, valida a latência e impede 
+    a execução direta (Bypass de IP Real). Força OpSec máxima.
+    """
+    while True:
+        print("\n[!] Configuração de Proxy de Transporte (Ex: 45.79.12.110:3128)")
+        proxy_input = input("Digite o proxy (ou digite 'SAIR' para abortar): ").strip()
+        
+        if proxy_input.upper() == "SAIR":
             print("[-] Operação cancelada pelo operador para preservar a OpSec.")
             return "ABORTAR"
+            
+        if not proxy_input:
+            print("\n\033[91m[!] ERRO DE OPSEC: Conexão DIRETA proibida pelas políticas do Kernel!\033[0m")
+            print("[*] Insira um proxy válido para envelopar o tráfego.")
+            continue
+
+        if not proxy_input.startswith(("http://", "https://", "socks4://", "socks5://")):
+            proxy_string = f"http://{proxy_input}"
+        else:
+            proxy_string = proxy_input
+
+        print(f"[*] Testando integridade do túnel com o proxy {proxy_string}...")
+        
+        try:
+            limpo = proxy_string.replace("http://", "").replace("https://", "").replace("socks5://", "").replace("socks4://", "")
+            p_ip, p_porta = limpo.split(":")
+            p_porta = int(p_porta)
+        except Exception:
+            print("[!] Erro de Sintaxe: Use o formato IP:PORTA (Ex: 83.239.34.82:8080)")
+            continue
+
+        try:
+            s_teste = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s_teste.settimeout(5) 
+            s_teste.connect((p_ip, p_porta))
+            s_teste.close()
+            print(f"[+] PROXY DE TRANSPORTE RECEPTIVO! IP mascarado via: {proxy_string}")
+            return {"string": proxy_string, "ip": p_ip, "porta": p_porta}
+        except (socket.timeout, ConnectionRefusedError):
+            print(f"\n\033[91m[!] ALERTA DE TIMEOUT: O proxy {proxy_input} está inativo ou recusou a conexão!\033[0m")
+            print("[*] Forçando contingência: Insira um nó alternativo para evitar vazamento de IP.")
+
 
 
 # ==========================================
@@ -199,19 +203,19 @@ def motor_furtivo_avancado(meu_ip, ip_alvo, porta, agressividade, resultados):
     elif agressividade == "3":
         time.sleep(random.uniform(0.01, 0.2))
 
-    # --- ENGENHARIA DE REDE LOCAL (BYPASS DE FIREWALL DE GATEWAY) ---
+    
     eh_ip_local = ip_alvo.startswith(("192.168.", "10.", "172.16.", "127."))
     
     if eh_ip_local:
         try:
             s_local = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s_local.settimeout(1.5) # Timeout calibrado para capturar o gelo do roteador
+            s_local.settimeout(1.5) 
             resultado_conexao = s_local.connect_ex((ip_alvo, porta))
             
             if resultado_conexao == 0:
                 print(f"[+] Porta {porta}: ABERTA (Mapeamento Local Direto)")
                 servico = f"Serviço Ativo: {porta}"
-                if porta in[80,443,8080]: 
+                if porta in[8080,443,80]: 
                     servico = "Apache/Nginx (Web)"
                 elif porta == 22: servico = "OpenSSH"
                 elif porta == 21: servico = "Pure-FTPd"
@@ -222,7 +226,7 @@ def motor_furtivo_avancado(meu_ip, ip_alvo, porta, agressividade, resultados):
                 
                 resultados[porta] = {"servico": servico, "os": "Localhost / Gateway Interno", "status": "Aberta"}
             else:
-                # CORREÇÃO: Avisa o operador se o roteador barrou, dropou ou recusou a porta local
+               
                 print(f"[-] Porta {porta}: \033[93mFILTERED / CLOSED\033[0m (Código: {resultado_conexao})")
                 
             s_local.close()
@@ -230,7 +234,7 @@ def motor_furtivo_avancado(meu_ip, ip_alvo, porta, agressividade, resultados):
         except Exception:
             return
 
-    # --- MOTOR INTERNET ORIGINAL (RAW SYN + DECOYS) ---
+    
     decoys = [
         f"{random.randint(1,223)}.{random.randint(1,254)}.{random.randint(1,254)}.{random.randint(1,254)}"
         for _ in range(10)
@@ -252,7 +256,7 @@ def motor_furtivo_avancado(meu_ip, ip_alvo, porta, agressividade, resultados):
     if porta_aberta:
         print(f"[+] Porta {porta}: ABERTA | TTL: {ttl_detectado} | Window Size: {window_detectado}")
     
-    # 1. Dedução do Sistema Operacional (OS)
+        # 1. Dedução do Sistema Operacional (OS)
         so_deduzido = "Desconhecido"
         if ttl_detectado:
             if ttl_detectado <= 64: so_deduzido = "Linux / Unix / macOS"
@@ -260,10 +264,15 @@ def motor_furtivo_avancado(meu_ip, ip_alvo, porta, agressividade, resultados):
             elif ttl_detectado <= 255: so_deduzido = "Dispositivo de Rede (Roteador)"
 
         if window_detectado and so_deduzido == "Desconhecido":
-            if window_detectado in[5840, 29200]: so_deduzido = "Linux / Unix"
-            elif window_detectado in[16384, 65535, 8192]: so_deduzido = "Windows"
+            # Intervalos padrão para pilhas Linux/Unix (Geralmente múltiplos de 1460, baseados em MTU 1500)
+            if 1024 <= window_detectado <= 32768: 
+                so_deduzido = "Linux / Unix"
             
-    # 2. Mapeamento de Serviços usando Dicionário (Mais rápido e limpo)
+            # Intervalos padrão para a pilha do ecossistema Windows (Valores históricos de 8k, 16k e 64k)
+            elif 32769 <= window_detectado <= 65535 or window_detectado == 8192: 
+                so_deduzido = "Windows"
+
+        # 2. Mapeamento de Serviços usando Dicionário (Mais rápido e limpo)
         mapeamento_portas = {
             21: "Pure-FTPd",
             22: "OpenSSH",
@@ -276,38 +285,37 @@ def motor_furtivo_avancado(meu_ip, ip_alvo, porta, agressividade, resultados):
             3389: "RDP Windows",
             3478: "VoIP / Chamadas de Vídeo",
             8080: "Apache/Nginx (Web)"
-        }   
+        }
 
-    # Busca a porta no dicionário. Se não achar, define como "Serviço Ativo"
+        # Busca a porta no dicionário. Se não achar, define como "Serviço Ativo"
         servico = mapeamento_portas.get(porta, "Serviço Ativo")
 
-    # Se a porta não está mapeada nas conhecidas (incluindo as de e-mail do seu código antigo)
+        
         portas_conhecidas = list(mapeamento_portas.keys()) + [25, 143, 547, 587]
         if porta not in portas_conhecidas:
             print(f"[+] A porta encontrada foi: {porta}.")
 
-    # 3. Salvando resultados e enviando RST (Fechar a conexão aberta pelo SYN-ACK)
+        
         resultados[porta] = {"servico": servico, "os": so_deduzido, "status": "Aberta"}
         enviar_pacote_raw(meu_ip, ip_alvo, porta, flag_syn=False, flag_rst=True)
 
     else:
-    # Se bater na internet e der timeout no SYN-ACK, joga o log de filtrada
+        
         print(f"[-] Porta {porta}: FILTERED (Sem resposta SYN-ACK e nem RST, caba dropou apenas)")
-
 
 
 # ==========================================
 # MÓDULO 3: MOTOR WEB - DIRECTORY FUZZER (9/10)
 # ==========================================
 
-def testar_diretorio_com_evasao_l7(url_base, diretorio, agressividade, assinatura_falsa, achados, pool_proxies=None):
+def testar_diretorio_com_evasao_l7(url_base, diretorio, agressividade, assinatura_falsa, achados, pool_proxies=None, ua_definido=None):
     """
     Fuzzer Web Avançado com Rotação de Proxies e Ofuscação Estrita de Cabeçalhos HTTP 
     para quebrar heurísticas de WAF. Blindado contra vazamento de variáveis em exceções.
     """
     agressividade = str(agressividade).strip()
     
-    # Controle rígido de timing (Anti-Rate Limiting)
+    
     if agressividade == "1":
         time.sleep(random.uniform(4.0, 12.0))
     elif agressividade == "2":
@@ -315,15 +323,20 @@ def testar_diretorio_com_evasao_l7(url_base, diretorio, agressividade, assinatur
 
     url_completa = f"{url_base}/{diretorio}" if not url_base.endswith("/") else f"{url_base}{diretorio}"
 
-    user_agents = [
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15",
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
-    ]
+   
+    if ua_definido:
+        user_agent_final = ua_definido
+    else:
+        user_agents_rotativos = [
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15",
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+        ]
+        user_agent_final = random.choice(user_agents_rotativos)
     
     # Cabeçalhos realistas combinados com técnicas de bypass de IP na Camada 7
     headers_completos = {
-        "User-Agent": random.choice(user_agents),
+        "User-Agent": user_agent_final,
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
         "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
         "Cache-Control": "max-age=0",
@@ -333,7 +346,7 @@ def testar_diretorio_com_evasao_l7(url_base, diretorio, agressividade, assinatur
         "X-Real-IP": f"{random.randint(1,254)}.{random.randint(1,254)}.{random.randint(1,254)}.{random.randint(1,254)}"
     }
 
-    # Inicialização estrita de contingência (Evita NameError em blocos except)
+  
     proxy_escolhido = "Direto"
     handler_proxy = urllib.request.ProxyHandler({})
     
@@ -355,16 +368,16 @@ def testar_diretorio_com_evasao_l7(url_base, diretorio, agressividade, assinatur
             status = resposta.status
             conteudo = resposta.read()
             
-            # Converte para string ignorando erros para validar estrutura/linhas
+            
             texto_real = conteudo.decode('utf-8', errors='ignore')
             linhas_reais = len(texto_real.splitlines())
             tamanho_real = len(conteudo)
 
-            # Evita colisões se a estrutura for idêntica ao erro padrão mapeado
+          
             if linhas_reais == assinatura_falsa:
                 return
 
-            if status == 200:
+            if status == 200 or 204:
                 print(f"  [+] \033[92mFOUND\033[0m: {url_completa} (Status: {status} | Size: {tamanho_real}b) -> Via Proxy: {proxy_escolhido}")
                 achados.append({"url": url_completa, "status": status, "tipo": "Acessivel"})
                 
@@ -377,12 +390,12 @@ def testar_diretorio_com_evasao_l7(url_base, diretorio, agressividade, assinatur
             linhas_erro = 0
             tamanho_erro = 0
         
-        # Ignora se for a página padrão de erro 404 do alvo ou Catch-All baseado em linhas
+        
         if e.code == 404 or linhas_erro == assinatura_falsa:
             return
             
-        # Captura redirecionamentos e restrições críticas de Camada 7
-        if e.code in[301,302, 303, 307,307, 403,401]:
+       
+        if e.code in[301, 302, 307, 401, 403, 451, 303]:
             print(f"  [+] \033[93mRESTRICTED/REDIRECT\033[0m: {url_completa} (Status: {e.code} | Size: {tamanho_erro}b) -> Via Proxy: {proxy_escolhido}")
             achados.append({"url": url_completa, "status": e.code, "tipo": "Restrito"})
         elif e.code == 429:
@@ -391,13 +404,12 @@ def testar_diretorio_com_evasao_l7(url_base, diretorio, agressividade, assinatur
         pass
 
 
-def motor_diretorios_web(url_base, agressividade, pool_proxies=None):
+def motor_diretorios_web(url_base, agressividade, pool_proxies=None, ua_modo="1"):
     """Gerencia o fuzzer de caminhos ocultos contra Catch-All com assinatura ofuscada."""
     print(f"\n--- [ LEVIATÃ: WEB DIRECTORY FUZZER ] ---")
     print(f"[*] Analisando comportamento de falsos positivos do servidor alvo...")
 
     contexto_ssl = ssl._create_unverified_context()
-    # Simula uma chamada de script dinâmico comum de CMS
     url_falsa = f"{url_base}/wp-content/themes/twentytwenty/assets/js/main_{random.randint(100,999)}.js"
     assinatura_falsa = -1
     
@@ -413,7 +425,7 @@ def motor_diretorios_web(url_base, agressividade, pool_proxies=None):
             assinatura_falsa = len(conteudo_erro.splitlines())
         else:
             assinatura_falsa = 0
-        print(f"[+] Servidor responde {e.code} normalmente. Assinatura de erro fixada em: {assinatura_falsa} linhas.")
+        print(f"[+] Servidor responde {e.code} normalmente. Assinatura de erro fixada in: {assinatura_falsa} linhas.")
     except Exception as e:
         print(f"[!] Erro ao testar Catch-All: {e}")
         
@@ -439,15 +451,28 @@ def motor_diretorios_web(url_base, agressividade, pool_proxies=None):
     ]
     random.shuffle(wordlist)
     print(f"[*] Wordlist tática embaralhada: {len(wordlist)} caminhos na fila.")
+
+   
+    ua_selecionado = None
+    if ua_modo == "2":
+        pool_seguro_ua = [
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/119.0",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/118.0",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0"
+        ]
+        ua_selecionado = random.choice(pool_seguro_ua)
+        print(f"[*] OpSec: Modo Fixo Ativado. Assinatura estática para a sessão: {ua_selecionado}")
+    else:
+        print("[*] OpSec: Modo de Rotação Dinâmica ativado por request.")
+
     print("[*] Iniciando Fuzzing...\n")
     
     diretorios_achados = []
     for pasta in wordlist:
-        testar_diretorio_com_evasao_l7(url_base, pasta, agressividade, assinatura_falsa, diretorios_achados, pool_proxies)
+        testar_diretorio_com_evasao_l7(url_base, pasta, agressividade, assinatura_falsa, diretorios_achados, pool_proxies, ua_definido=ua_selecionado)
         
     print("[*] Varredura de diretórios finalizada.")
     return diretorios_achados
-
 # ========================================================
 # MÓDULO 4: LSE (LEVIATHAN SCRIPTING ENGINE) - SCRIPTS INLINE
 # ========================================================
@@ -570,7 +595,7 @@ def ouvinte_secreto():
             resultados_finais = {}
             threads = []
             
-            # User-Agent randômico para as chamadas do LSE
+            
             lista_ua = ["Mozilla/5.0 Chrome/122.0.0.0", "Mozilla/5.0 Safari/17.3", "Mozilla/5.0 Firefox/119.0"]
             ua_sorteado = random.choice(lista_ua)
             
@@ -626,7 +651,7 @@ def ouvinte_secreto():
                 
             print(f"[=>] Sistema Operacional Provável: {so_provavel}\n")
             
-            # --- DISPARADOR ATIVO DO MOTOR DE SCRIPTS LSE (A MOSCA) ---
+            
             print("[*] LSE: Inicializando auditoria cirúrgica de scripts stealth...")
             vulnerabilidades_descobertas = []
             for p_aberta, info_p in resultados_finais.items():
@@ -669,8 +694,16 @@ def ouvinte_secreto():
                 
             opcao = input("\n[?] Deseja rodar o Fuzzer de diretórios neste alvo? (s/n): ").strip().lower()
             if opcao == "s":
+                print("\nConfiguração de User-Agent para Evasão de Heurística de WAF:")
+                print(" [1] Rotativo Dinâmico (Muda a cada requisição de diretório)")
+                print(" [2] Fixo Aleatório (Gera uma única identidade de navegador segura para o scan inteiro)")
+                modo_ua_input = input("Escolha o modo do User-Agent (1/2): ").strip()
+                if modo_ua_input not in ["1", "2"]:
+                    modo_ua_input = "1"
+
                 pool_usuario = [proxy_infra["string"]] if proxy_infra else None
-                diretorios_reais = motor_diretorios_web(url_web, agressividade, pool_usuario)
+                
+                diretorios_reais = motor_diretorios_web(url_web, agressividade, pool_usuario, ua_modo=modo_ua_input)
                 dados_scan["diretorios_vulneraveis"] = diretorios_reais
             else:
                 print("[*] Fuzzing de diretórios pulado pelo operador.")
@@ -751,13 +784,13 @@ def ouvinte_secreto():
             
 if __name__ == "__main__":
     try:
-        # Inicializa o console com a identidade visual da corporação
+       
         print("\033[94m" + "="*55 + "\033[0m")
         print(" M O R N I N G S T A R  |  L E V I A T Ã")
         print(" [ Framework de Reconhecimento Furtivo ]")
         print("\033[94m" + "="*55 + "\033[0m")
         
-        # Dá o start no loop infinito da CLI interativa
+      
         ouvinte_secreto()
         
     except KeyboardInterrupt:
