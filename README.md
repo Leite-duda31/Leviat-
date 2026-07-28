@@ -35,18 +35,6 @@ A arquitetura do framework é dividida de forma isolada para garantir estabilida
 
 ---
 
-## 📊 Outputs e Relatórios
-
-Toda a inteligência coletada durante o ciclo de execução da CLI interativa é sintetizada e tratada. O framework consolida:
-* Portas abertas, serviços ativos e sistemas operacionais deduzidos (via análise passiva de TTL/Window).
-* Vulnerabilidades identificadas pelo motor LSE.
-* Diagnóstico de políticas de borda web (Cabeçalhos HTTP como HSTS, CSP, X-Frame-Options).
-* Estrutura de diretórios mapeados.
-
-Os dados são salvos em relatórios portáveis estruturados em formato JSON (`relatorio_leviata.json`) gerados com indexação automática anticolisão.
-
----
-
 ## 🧠 Aprendizados Técnicos
 
 O desenvolvimento deste framework proporcionou uma compreensão aprofundada de:
